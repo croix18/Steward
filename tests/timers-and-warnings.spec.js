@@ -157,12 +157,12 @@ test.describe("settings keyboard and focus", () => {
       "keyboard close lost focus");
   });
 
-  test("v7.2: settings is a tab rail — 6 tabs, one panel visible, General first", async ({ page, dh }) => {
+  test("v7.2: settings is a tab rail — 7 tabs (Steward adds Classes), one panel visible, General first", async ({ page, dh }) => {
     await dh.openAt("");
     await dh.launch();
     await page.click("#setBtn");
     const tabs = await page.locator("#setRail .setTab").allTextContents();
-    ok(tabs.join("|") === "General|Bells|Timer|Rosters|Schedules|Device", "tabs: " + tabs.join("|"));
+    ok(tabs.join("|") === "General|Classes|Bells|Timer|Rosters|Schedules|Device", "tabs: " + tabs.join("|"));
     const vis = async () => page.evaluate(() =>
       [...document.querySelectorAll("#setPanels .setSec")].filter(s => !s.hidden).map(s => s.id));
     ok((await vis()).join() === "secGeneral", "panels visible on open: " + (await vis()).join());
@@ -199,6 +199,8 @@ test.describe("settings keyboard and focus", () => {
       "focus escaped the dialog: " + [...seen].join(","));
     // the rail: arrow keys switch tabs, and Tab then walks THAT panel
     await page.focus("#tabGeneral");
+    await page.keyboard.press("ArrowDown");        // Steward 1.0: Classes sits between General and Bells
+    ok(await page.evaluate(() => window.Steward.settings.currentTab()) === "classes", "ArrowDown did not reach Classes");
     await page.keyboard.press("ArrowDown");
     ok(await page.evaluate(() => window.Steward.settings.currentTab()) === "bells", "ArrowDown did not switch");
     ok(await page.evaluate(() => document.activeElement.id) === "tabBells", "focus not on the new tab");

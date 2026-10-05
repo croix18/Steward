@@ -20,9 +20,8 @@ const fs = require("fs");
 const os = require("os");
 
 const ROOT = path.resolve(__dirname, "..");
-const APP = path.join(ROOT, "Steward.html");
-const APP_URL = "file://" + APP;
-const SRC = fs.readFileSync(APP, "utf8");
+const SHIPPED = path.join(ROOT, "Steward.html");
+const SHIPPED_SRC = fs.readFileSync(SHIPPED, "utf8");
 
 const ok = (cond, msg) => { if (!cond) throw new Error(msg || "assertion failed"); };
 /* v7.7: open the board on any page — the landing page is skipped when the
@@ -36,6 +35,25 @@ const inject = (src, cfgText) => src.replace(
   /(<script id="steward-config"[^>]*>)[\s\S]*?(<\/script>)/,
   (_, a, b) => a + "\n" + cfgText + "\n" + b
 );
+
+/* Steward 1.0: two boards, one engine. Steward ships an ESE board (schedule, First / Then,
+   tokens, the clock small; settle-in and seasons off). The suite inherited from Deckhand was
+   written against Deckhand's board (a full-board clock, settle-in on, seasons auto), so those
+   specs run the SAME Steward.html with Deckhand's config block baked in — tests/legacy-config.json
+   — written beside the release as tmp_legacy.html (git-ignored). `dh.openAt` opens that;
+   `dh.openShipped` opens the release exactly as it ships (tests/steward.spec.js). */
+const LEGACY_CFG = fs.readFileSync(path.join(__dirname, "legacy-config.json"), "utf8").trim();
+const SRC = inject(SHIPPED_SRC, LEGACY_CFG);
+const APP = path.join(ROOT, "tmp_legacy.html");
+const APP_URL = "file://" + APP;
+(function writeLegacy(){
+  let have = null;
+  try { have = fs.readFileSync(APP, "utf8"); } catch (e) {}
+  if (have === SRC) return;
+  const tmp = APP + "." + process.pid + ".part";      // atomic: four workers load this module at once
+  fs.writeFileSync(tmp, SRC);
+  fs.renameSync(tmp, APP);
+})();
 
 const test = base.test.extend({
   // per-test error collection: page errors and console errors fail the test at the end
@@ -69,7 +87,8 @@ const test = base.test.extend({
     };
     watch(page);
     await page.emulateMedia({ reducedMotion: "reduce" });   // belt + braces (see playwright.config.js)
-    const url = baseURL ? baseURL + "Steward.html" : APP_URL;
+    const url = baseURL ? baseURL + "tmp_legacy.html" : APP_URL;
+    const shippedUrl = baseURL ? baseURL + "Steward.html" : "file://" + SHIPPED;
     const fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), "steward-fx-"));
     const ignore = [];
 
@@ -80,6 +99,13 @@ const test = base.test.extend({
         await page.goto("about:blank");
         await page.goto(url + (hash || ""));
         await page.waitForFunction(() => !!window.Steward);   // booted (the script runs after the markup parses)
+        await page.waitForTimeout(150);
+      },
+      /** Steward 1.0: fresh boot of the release exactly as it ships (its own ESE board) */
+      openShipped: async hash => {
+        await page.goto("about:blank");
+        await page.goto(shippedUrl + (hash || ""));
+        await page.waitForFunction(() => !!window.Steward);
         await page.waitForTimeout(150);
       },
       /** reload KEEPING the device store (autosave persistence tests) */
@@ -172,7 +198,7 @@ const test = base.test.extend({
         return p;
       },
       fixtureDir,
-      inject, SRC, APP, ROOT,
+      inject, SRC, APP, ROOT, SHIPPED, SHIPPED_SRC,
       newPage: async opts => {
         const pg = await context.newPage(); watch(pg);
         await pg.emulateMedia({ reducedMotion: (opts && opts.reducedMotion) || "reduce" });
@@ -193,4 +219,4 @@ const test = base.test.extend({
   }
 });
 
-module.exports = { test, expect: base.expect, ok, launch, inject, SRC, APP, APP_URL, ROOT };
+module.exports = { test, expect: base.expect, ok, launch, inject, SRC, APP, APP_URL, ROOT, SHIPPED, SHIPPED_SRC };

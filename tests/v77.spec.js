@@ -93,7 +93,7 @@ test.describe("v7.7 one chrome bar", () => {
     await page.click("#moreBtn");
     await expect(page.locator("#moreMenu")).toBeVisible();
     await expect(page.locator("#moreMenu #brand")).toContainText("STEWARD");
-    await expect(page.locator("#moreMenu #brandVer")).toHaveText("v0");
+    await expect(page.locator("#moreMenu #brandVer")).toHaveText("v1");
     await expect(page.locator("#moreMenu #homeBtn")).toBeVisible();
     await expect(page.locator("#moreMenu #sceneBtn")).toBeVisible();   // v7.15: Scenes lives here; Fullscreen went back to the top-right corner
     ok(await page.locator("#moreMenu #fsBtn").count() === 0, "Fullscreen is still under ⋮");

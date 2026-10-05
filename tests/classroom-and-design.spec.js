@@ -263,7 +263,7 @@ test.describe("v6.13 design pass", () => {
       "strip targets: " + JSON.stringify(m));
     await page.click("#addBtn");
     const labels = await page.locator("#addMenu .menuLabel").allTextContents();
-    ok(labels.join("|") === "Time|Class|Room|Post|Media|Math",   // v7.12: regrouped (the tools audit)
+    ok(labels.join("|") === "Support|Time|Class|Room|Post|Media|Tools",   // v7.12: regrouped; Steward 1.0: Support leads, Math is Tools
       "menu groups: " + labels.join("|"));
     // v7.0: the popover is a group, not a menu
     ok(await dh.attr("#addMenu", "role") === "group", "add menu role: " + await dh.attr("#addMenu", "role"));

@@ -10,6 +10,7 @@
 #   - no widget carries free text (notes, agenda, teams, tally, titles, saved decks)
 #   - ownerName is the shipped default
 #   - the settle-in message, scene names and widget labels are the shipped ones
+#   - there is no "support" key (the schedule / First-Then / token / calm setup, per class)
 #   - no tmp_*.html fixture is staged
 #   - no *.json / *.md / *.txt / *.csv in the tree carries a roster shape (students / names)
 #   - every commit about to be pushed (origin/main..HEAD) passes the same config check —
@@ -45,6 +46,9 @@ try {
   }
   if (!seed.scenes.size) seed = null;                 // no remote yet: nothing to compare against
 } catch (e) { seed = null; }
+/* Steward 1.0: the scenes the release itself ships. A scene name outside this list AND outside
+   what is already public is somebody's own board. */
+if (seed) ["Daily Board", "Work Time", "Break", "Stations"].forEach(n => seed.scenes.add(n));
 function checkConfig(f, c) {
   const names = (c.rosters || []).flatMap(r => (r && r.names) || [])
     .concat((c.cards && c.cards.log || []).flatMap(e => (e && e.names) || []));   // v7.32: the comment-card log
@@ -72,6 +76,9 @@ function checkConfig(f, c) {
   /* v7.14: the wrap-up's prompt, checklist and rule are free text too */
   if (c.bell && c.bell.wrapup) ["prompt", "steps", "msg"].forEach(k => { if (String(c.bell.wrapup[k] || "").trim()) texty.push("bell.wrapup." + k); });
   if (seed) (c.scenes || []).forEach(s => { if (s && s.name && !seed.scenes.has(s.name)) texty.push("scene.name"); });
+  /* Steward 1.0: the four tools' setup is free text all the way down (step words, group names,
+     rewards) and is NEVER in the public block — a fresh device takes the defaults in the script. */
+  if (c.support !== undefined) texty.push("support (a class setup)");
   const owner = c.ownerName;
   if (names.length || urls.length || texty.length || owner) {
     console.error(`${f}: REFUSED — ${names.length} roster names, ${urls.length} URLs, content in [${texty.join(", ")}], owner=${JSON.stringify(owner)}`);
