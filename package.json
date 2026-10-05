@@ -1,0 +1,21 @@
+{
+  "name": "steward",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Single-file classroom board for an ESE resource room (a fork of Deckhand): clock, bells, visual timers, tools.",
+  "license": "MIT",
+  "scripts": {
+    "test": "playwright test",
+    "test:file": "playwright test --project=file",
+    "test:touch": "playwright test --project=touch",
+    "test:http": "playwright test --project=http",
+    "test:headed": "playwright test --project=file --headed",
+    "check": "sh tools/check.sh",
+    "serve": "node tools/serve.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.0",
+    "jsqr": "^1.4.0",
+    "qrcode": "^1.5.4"
+  }
+}
