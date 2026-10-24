@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.1.0 — October 24, 2026
+
+Steward is the public board at **mrshaffer.org/steward/** — the door on the home page (Croix:
+"switch deckhand for steward on the public page"; Deckhand went behind the teacher's password).
+Two fixes from Deckhand since the fork, both felt by a finger on a panel:
+
+- **One tap on Done closes a note, every time** (Deckhand 7.43). Done used to close the editor on
+  the finger's down, so the tap's click landed on the note that slid up under it and opened it
+  again; a mouse never showed it. Now the note closes when the finger lifts on Done — a tap, a
+  press held, a tap that slid a little — and for half a second after, a tap where Done was does
+  not reopen it. On the stage, Done sits clear of the Timer · Minimize · Exit bar.
+- **The "Steward updated — your saved board and rosters were kept" banner goes away by itself**
+  (Deckhand 7.44): six seconds, fifteen when it offers the new bell schedule; a touch keeps it; the
+  warnings that share the banner (a newer file, an unreadable board, another window) still stay.
+
+Not brought over: the rest of Deckhand 7.39–7.51 is the math room's — comment cards, the name
+picker's Refused and board list, the slides toolbar, the wrap-up song.
+
+Three tests added (296).
+
 ## 1.0.0 — October 5, 2026
 
 Steward becomes an ESE board. Croix: "It's gotta be absolutely optimized for an ese classroom,

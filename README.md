@@ -5,7 +5,8 @@ A classroom board for an **ESE resource room**, in one HTML file. Steward is a f
 what a pull-out room needs: small groups rotating through, readers who need structure, short
 chunks and clear timers, on a touch panel at the front of the room.
 
-Version 1.0.0. Open `Steward.html` in Chrome and it runs: no server, no account, nothing to
+Version 1.1.0. It is live at **mrshaffer.org/steward/** (installs as an app, opens offline), or open
+`Steward.html` in Chrome and it runs: no server, no account, nothing to
 install.
 
 ## The four tools

@@ -1427,3 +1427,123 @@ test.describe("v7.31", () => {
     ok(!(await page.evaluate(() => /comment card/i.test(document.querySelector("#clockSettle").textContent))), "the comment card showed");
   });
 });
+test.describe("v7.43", () => {
+  /* Croix: "The text box tool was super weird. The title wouldn't go away when I clicked done. Then it
+     worked. Then it didn't. Then I held down done and it worked. I want to be able to just tap done."
+     Done shut the editor on the finger's DOWN; the tap's click then landed on the note that slid up
+     under the finger and opened it again. Only a finger shows it — a mouse click never did. */
+  const editing = page => page.evaluate(() => document.querySelector(".w-text").classList.contains("txEditing"));
+  const tapOn = async (page, sel) => { const b = await page.locator(sel).first().boundingBox(); await page.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2); };
+  for (const staged of [false, true]){
+    test("@touch v7.43: one tap on Done closes the note" + (staged ? " (on the stage)" : "") + " — every time; a double tap does not open it again; held or slid, it closes; a tap elsewhere on the note opens it straight away", async ({ page, dh }) => {
+      await dh.openAt("#t=2026-10-06T10:30:00");
+      await dh.launch();
+      await dh.addW("addTextBtn"); await page.keyboard.press("Escape");
+      if (staged){ await page.evaluate(() => document.querySelector(".w-text .wFocus").click()); await page.waitForTimeout(400); }
+      for (let i = 0; i < 5; i++){
+        await tapOn(page, ".w-text .txDisplay");
+        await expect.poll(() => editing(page), { message: "a tap on the note did not open it (round " + (i + 1) + ")" }).toBe(true);
+        await page.keyboard.type(i ? " " + i : "Quiz Friday");
+        if (staged && !i){                      // on the stage the bar (Timer · Minimize · Exit) covered the top of Done
+          const d = await page.locator(".w-text .txBtn").boundingBox(), f = await page.locator("#focusBar").boundingBox();
+          ok(d.y >= f.y + f.height + 4 || d.x >= f.x + f.width || d.x + d.width <= f.x, "the stage bar covers Done");
+        }
+        await tapOn(page, ".w-text .txBtn");
+        await page.waitForTimeout(300);
+        ok(!(await editing(page)), "one tap on Done left the editor open (round " + (i + 1) + ")");
+        await page.waitForTimeout(150);
+      }
+      await expect(page.locator(".w-text .txInner")).toHaveText("Quiz Friday 1 2 3 4");
+      ok((await page.evaluate(() => document.querySelector(".w-text")._entry.cfg.html)).includes("Quiz Friday 1 2 3 4"), "the note was not saved");
+      // a double tap on Done: the second tap lands on the note — it must not open it again
+      await tapOn(page, ".w-text .txDisplay");
+      await expect.poll(() => editing(page)).toBe(true);
+      const b = await page.locator(".w-text .txBtn").boundingBox();
+      await page.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2);
+      await page.waitForTimeout(90);
+      await page.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2);
+      await page.waitForTimeout(300);
+      ok(!(await editing(page)), "a double tap on Done opened the note again");
+      await expect(page.locator(".w-text .txBar")).toBeHidden();
+      // a press held on Done (what worked for him before), and a tap whose finger slid: both close it
+      const cdp = await page.context().newCDPSession(page);
+      const touchAt = (type, x, y) => cdp.send("Input.dispatchTouchEvent", { type, touchPoints: type === "touchEnd" ? [] : [{ x, y }] });
+      for (const [hold, slide] of [[900, 0], [60, 18]]){
+        await page.waitForTimeout(600);
+        await tapOn(page, ".w-text .txDisplay");
+        await expect.poll(() => editing(page)).toBe(true);
+        const d = await page.locator(".w-text .txBtn").boundingBox(), x = d.x + d.width / 2, y = d.y + d.height / 2;
+        await touchAt("touchStart", x, y); await page.waitForTimeout(hold);
+        if (slide) await touchAt("touchMove", x + slide * 0.6, y + slide * 0.8);
+        await touchAt("touchEnd"); await page.waitForTimeout(300);
+        ok(!(await editing(page)), slide ? "a tap on Done that slid " + slide + "px left the editor open" : "a press held on Done left the editor open");
+      }
+      await cdp.detach();
+      // the half-second guard is only where Done was: a tap elsewhere on the note right away opens it
+      await tapOn(page, ".w-text .txDisplay");
+      await expect.poll(() => editing(page)).toBe(true);
+      await tapOn(page, ".w-text .txBtn");
+      const n = await page.locator(".w-text .txDisplay").boundingBox();
+      await page.touchscreen.tap(n.x + n.width / 2, n.y + n.height * 0.75);
+      await expect.poll(() => editing(page), { message: "a tap on the note away from Done, just after Done, did not open it" }).toBe(true);
+      await tapOn(page, ".w-text .txBtn");
+      await expect(page.locator(".w-text .txInner")).toHaveText("Quiz Friday 1 2 3 4");
+    });
+  }
+});
+
+test.describe("v7.44", () => {
+  /* Croix: "That saved your board and rosters message, can you have it go away after a few seconds" */
+  const olderCopy = async (page, bells) => page.evaluate(b => {
+    const o = JSON.parse(localStorage.getItem("steward.config"));
+    o.fileVersion = "1.0.0";   // (Steward: an older file of its own)
+    if (b) o.cfg.bell.groups[0].name = "Old Week";
+    localStorage.setItem("steward.config", JSON.stringify(o));
+  }, bells);
+  test("v7.44: the 'board and rosters were kept' banner goes away by itself in a few seconds — longer when it offers the new bells; a touch keeps it; the other-window warning in the same banner stays", async ({ page, dh }) => {
+    test.setTimeout(90000);
+    // plain: gone by itself in about six seconds
+    await dh.openAt("#t=2026-09-21T10:30");
+    await olderCopy(page, false);
+    await dh.reopen("#t=2026-09-21T10:30");
+    await expect(page.locator("#verNudgeText")).toContainText("rosters were kept");
+    await page.waitForTimeout(4500);
+    await expect(page.locator("#verNudge")).toBeVisible();
+    await expect(page.locator("#verNudge")).toBeHidden({ timeout: 4000 });
+    // offering the new bell schedule: still there at eight seconds, gone by itself after
+    await olderCopy(page, true);
+    await dh.reopen("#t=2026-09-21T10:30");
+    await expect(page.locator("#verNudgeBells")).toBeVisible();
+    await page.waitForTimeout(8000);
+    await expect(page.locator("#verNudge")).toBeVisible();
+    await expect(page.locator("#verNudge")).toBeHidden({ timeout: 9000 });
+    // a tap on "Use the new bell schedule" while it is fading still adopts the bells (it used to fall through to the card below)
+    await olderCopy(page, true);
+    await dh.reopen("#t=2026-09-21T10:30");
+    await expect(page.locator("#verNudgeBells")).toBeVisible();
+    await page.waitForFunction(() => document.getElementById("verNudge").classList.contains("vnFade"), null, { timeout: 17000 });
+    await page.click("#verNudgeBells", { force: true });
+    await expect(page.locator("#verNudge")).toBeHidden();
+    ok((await page.evaluate(() => window.Steward.config.bell.groups[0].name)) === "Teal Week", "the bells tap during the fade was lost");
+    // a touch on it keeps it until × or the button
+    await olderCopy(page, false);
+    await dh.reopen("#t=2026-09-21T10:30");
+    await page.locator("#verNudgeText").click();
+    await page.waitForTimeout(7500);
+    await expect(page.locator("#verNudge")).toBeVisible();
+    await page.click("#verNudgeKeep");
+    await expect(page.locator("#verNudge")).toBeHidden();
+    // the update banner up, then another window saves: that warning must not fade with it
+    await olderCopy(page, false);
+    await dh.reopen("#t=2026-09-21T10:30");
+    await page.evaluate(() => {
+      const o = JSON.parse(localStorage.getItem("steward.config")); o.cfg.ownerName = "Ms. Other";
+      const str = JSON.stringify(o); localStorage.setItem("steward.config", str);
+      window.dispatchEvent(new StorageEvent("storage", { key: "steward.config", newValue: str, oldValue: "x" }));
+    });
+    await expect(page.locator("#verNudgeText")).toContainText("another window");
+    await page.waitForTimeout(8000);
+    await expect(page.locator("#verNudge")).toBeVisible();
+    await expect(page.locator("#verNudgeText")).toContainText("another window");
+  });
+});

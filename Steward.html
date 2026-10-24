@@ -30,7 +30,7 @@
 <script id="steward-config" type="application/json">
 {
   "schemaVersion": 4,
-  "appVersion": "1.0.0",
+  "appVersion": "1.1.0",
   "ownerName": "",
   "ui": { "locked": false, "motion": "off", "seaWeather": "calm", "season": "off" },
   "activeScene": "Daily Board",
@@ -653,6 +653,7 @@
     display:flex; gap:10px; align-items:center; max-width:94vw;
   }
   #verNudge[hidden]{display:none;}
+  #verNudge.vnFade{opacity:0; transition:opacity .55s ease;}   /* still tappable while it fades: a tap there keeps it (never falls through to a card) */
   #verNudge button{
     font:inherit; font-weight:700; cursor:pointer; border:0; border-radius:999px;
     padding:8px 14px; min-height:40px; background:var(--turq); color:var(--navy);
@@ -1162,7 +1163,10 @@
   .txSerif{font-family:Georgia, serif;}
   .txMono{font-family:"Courier New", monospace;}
   .txHand{font-family:"Comic Sans MS", "Segoe Print", cursive;}
-  .txBar .txBtn{margin-left:auto; padding:9px 18px; font-size:15px;}
+  .txBar .txBtn{margin-left:auto; touch-action:none; padding:9px 18px; font-size:15px;}
+  /* v7.43: a note on the stage — its strip is folded, so the edit bar rose to the top and the stage bar
+     (Timer · Minimize · Exit, above everything) covered the top of Done: a tap there hit Timer or Exit */
+  body.focusMode:not(.landing) .w-text.wFull.txEditing .txBody{padding-top:42px;}
   @container (max-width: 520px){
     .txTool{min-width:34px; min-height:34px; font-size:13px; padding:3px 6px;}
     .txBar .txBtn{padding:7px 14px; font-size:13px;}
@@ -4935,7 +4939,7 @@ var WRAPUP_STEPS = "Finish the exit ticket\nPack up\nPush in your chair";
 var WRAPUP_MSG = "The teacher dismisses you, not the bell.";
 var DEFAULTS = {
   schemaVersion: 4,
-  appVersion: "1.0.0",
+  appVersion: "1.1.0",
   ownerName: "",
   ui: { locked: false, motion: "auto", seaWeather: "varies", season: "auto" },
   activeScene: "Daily Board",
@@ -8026,6 +8030,7 @@ function makeText(host, wcfg){
   }
   function startEdit(){
     if (cfg.ui.locked) return;                   // a locked board is read-only
+    doneAt = null;
     editing = true;
     host.classList.add("txEditing");
     if (!wcfg.html){ inner.classList.remove("txEmpty"); inner.innerHTML = ""; }
@@ -8052,6 +8057,7 @@ function makeText(host, wcfg){
     var probe = document.createElement("div"); probe.innerHTML = html;
     wcfg.html = probe.textContent.trim() ? html : "";
     bar.hidden = true;
+    committedAt = Date.now();
     paint();
   }
   /* ---- toolbar: pointerdown is prevented so the selection in the
@@ -8098,10 +8104,28 @@ function makeText(host, wcfg){
     if (cmd === "smaller"){ sizeEm(-1); return; }
     document.execCommand(cmd, false, null);
   });
-  /* Done: the editor's blur already committed by the time the click
-     lands — the flag stops the click from reopening it */
-  var blurCommitted = false;
-  btn.addEventListener("pointerdown", function(e){ e.preventDefault(); if (editing) commit(); });
+  /* v7.43 Done (Croix: "The title wouldn't go away when I clicked done. Then it worked. Then it
+     didn't. Then I held down done and it worked. I want to be able to just tap done."): it used to
+     close the editor on the finger's DOWN, so the bar was gone before the finger lifted — and the
+     tap's click landed on the note that slid up under it, which opened the editor again. A long
+     press makes no click: that is why holding Done worked. Now the down only keeps the caret (no
+     blur) and the editor closes when the finger LIFTS on Done — a tap, a press held, a tap that
+     slid a little (Done takes no pan, so a sloppy finger is not cancelled) — or on a keyboard's
+     click. For half a second after, a tap on the note where Done was does not reopen it (the
+     click on its way, or the second tap of a double tap); a tap anywhere else on the note does. */
+  var committedAt = 0, doneAt = null, REOPEN_GUARD_MS = 500;
+  function doneTap(x, y){ doneAt = { x: x, y: y }; if (editing) commit(); }
+  var doneDown = false;                          // the press began on Done (a mouse selecting text and let go over Done does not count)
+  btn.addEventListener("pointerdown", function(e){ e.preventDefault(); doneDown = true; });
+  btn.addEventListener("pointercancel", function(){ doneDown = false; });
+  btn.addEventListener("pointerup", function(e){
+    var mine = doneDown; doneDown = false;
+    if (!mine || !editing || e.button > 0) return;
+    var r = btn.getBoundingClientRect(), m = 12;   // lifted on Done (or just off its edge)
+    if (e.clientX >= r.left - m && e.clientX <= r.right + m && e.clientY >= r.top - m && e.clientY <= r.bottom + m) doneTap(e.clientX, e.clientY);
+  });
+  btn.addEventListener("contextmenu", function(e){ e.preventDefault(); });
+  wireButton(btn, function(e){ if (editing) doneTap(e.clientX, e.clientY); });
   /* pencil tapped WHILE editing: commit, don't reopen */
   var pencilSkip = false;
   pencil.addEventListener("pointerdown", function(){ if (editing) pencilSkip = true; });
@@ -8111,7 +8135,11 @@ function makeText(host, wcfg){
     if (pencilSkip){ pencilSkip = false; return; }
     if (editing) commit(); else startEdit();
   });
-  disp.addEventListener("click", function(){ if (!editing) startEdit(); });
+  disp.addEventListener("click", function(e){
+    if (editing) return;
+    if (doneAt && Date.now() - committedAt < REOPEN_GUARD_MS && Math.abs(e.clientX - doneAt.x) < 60 && Math.abs(e.clientY - doneAt.y) < 60) return;
+    startEdit();
+  });
   inner.addEventListener("blur", function(){
     /* a toolbar tap keeps focus (pointerdown prevented); any other
        blur is a tap-away = save */
@@ -8130,7 +8158,6 @@ function makeText(host, wcfg){
     e.stopPropagation();                         // Space/R/digits are TEXT here
     if (e.key === "Escape"){ commit(); }
   });
-  void blurCommitted;
   paint();
   return {
     kind: "text",
@@ -17826,6 +17853,7 @@ var SaveState = (function(){
         suspended = true;
         try {
           var vn1 = document.getElementById("verNudge");
+          clearTimeout(vn1.__tid); vn1.__tid = null; vn1.classList.remove("vnFade");   // this one stays
           document.getElementById("verNudgeText").textContent = "This board was changed in another window. Reload to pick it up — nothing will be saved from here until then.";
           document.getElementById("verNudgeBells").hidden = true;
           vn1.hidden = false;
@@ -17864,6 +17892,21 @@ var SaveState = (function(){
           if (!fileBells || pick(fileBells) === pick(cfg.bell)){
             bellBtn.hidden = true;               // nothing to adopt
           }
+          /* v7.44 (Croix: "That saved your board and rosters message, can you have it go away after a
+             few seconds"): it fades by itself — six seconds, or fifteen when it offers the new bell
+             schedule (a choice deserves the time to read it). A touch on it keeps it until × or the
+             button. The warnings that share this banner (a newer file, an unreadable board, another
+             window) still stay until dismissed. */
+          vn.__tid = setTimeout(function(){
+            vn.classList.add("vnFade");
+            vn.__tid = setTimeout(function(){ vn.hidden = true; vn.classList.remove("vnFade"); vn.__tid = null; }, 600);
+          }, bellBtn.hidden ? 6000 : 15000);
+          var vnKeep = function(){
+            if (!vn.__tid) return;
+            clearTimeout(vn.__tid); vn.__tid = null; vn.classList.remove("vnFade");
+          };
+          vn.addEventListener("pointerdown", vnKeep);
+          vn.addEventListener("focusin", vnKeep);          // a keyboard on its buttons keeps it too
           wireButton(bellBtn, function(){
             cfg.bell.groups = fileBells.groups;
             cfg.bell.anchorMonday = fileBells.anchorMonday;

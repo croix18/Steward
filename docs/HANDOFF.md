@@ -1,8 +1,24 @@
 # Steward — handoff
 
-**State: v1.0.0, October 5, 2026.** The ESE board is built, tested (293 tests) and pushed. It has
-not been in front of the ESE teacher or a class yet; the first round of real feedback will decide
-what changes.
+**State: v1.1.0, October 24, 2026.** The ESE board is built, tested (296 tests) and pushed, and
+it is the public board at mrshaffer.org/steward/ — the door on the home page of Croix's site
+(Croix, 24 Oct: "switch deckhand for steward on the public page… Keep the coolest stuff for just
+me" — Deckhand moved behind the site's teacher password, /teacher/deckhand/). It has not been in
+front of the ESE teacher or a class yet; the first round of real feedback will decide what changes.
+
+**Keeping up with Deckhand.** Steward forked at Deckhand 7.38.0; Deckhand is at 7.51. On 24 Oct
+the two fixes a finger on a panel feels were ported (7.43 Done on a note, 7.44 the banner fades)
+as patches of `Deckhand.html` applied to `Steward.html` (`git diff c^ c -- Deckhand.html`, then
+`patch -F3`; the version-bump hunks and anything leaning on 7.42's stage-focus code are the ones
+that fail). The rest of 7.39–7.51 is the math room's (comment cards, the name picker's Refused and
+board list, the slides toolbar, the wrap-up song) and was left out on purpose. 7.42 (the clicker
+never dead on staged slides) and 7.41 (a minimized card comes up over the slides, tabs in the
+stage bar) are worth porting if she turns out to use slides; they come as a pair and touch the
+Canvas focus code heavily, so plan a session for them.
+
+**The site.** `tools/sync.py` in the mrshaffer-site repo copies `Steward.html` to
+`public/steward/index.html` (with the manifest and offline worker pointed at `./`); then commit
+and push the site. The version regex it reads is `\b1\.\d+\.\d+`.
 
 ## What Steward is
 
@@ -61,6 +77,10 @@ Test hooks: `window.Steward.support`, `.today`, `.picPop`, `.supSettings`, `.pic
 `tests/legacy-config.json` (Deckhand's board) as its config block. `dh.openAt()` opens that, so
 the 270 inherited specs keep testing the engine against the board they were written for.
 `dh.openShipped()` opens the release as it ships; `tests/steward.spec.js` (23 tests) uses it.
+
+One inherited test fails on 1.0.0 and 1.1.0 alike in the 24 Oct session's environment (v7.13 the
+countdown's school days, `v7115.spec.js:375` — `schoolDaysBetween` comes back one short, in UTC and
+in New York); not touched by the port, not yet understood.
 
 Load-sensitive tests that pass alone (inherited from Deckhand): v6.13 design `:343`, the embed
 local page `:103`, the pin test `:423`, v7.5 boat `:112`, v7.8 dice and sketch, v7.1 Pledge.
