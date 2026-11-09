@@ -6,7 +6,7 @@ const { test, expect, ok } = require("./helpers");
 /* ---------- landing ---------- */
 test.describe("landing", () => {
   test("landing: greeting, Teal/Black/No-bells chips, hint 1–3", async ({ page, dh }) => {
-    await dh.openAt("");
+    await dh.openLive();                 // Deckhand 7.55: the one boot kept on the real clock (any hour greets)
     ok(/^Good (morning|afternoon|evening)!$/.test(await dh.text("#greet")),
       "greeting: " + await dh.text("#greet"));
     const names = await page.locator("#schedChips .chip").allTextContents();
@@ -308,10 +308,13 @@ test.describe("day strip", () => {
 test.describe("weekend rollover", () => {
   const activeIndex = page => page.evaluate(() => window.Steward.activeIndex);
 
+  /* Steward 1.2: a day without school picks the coming week (Bell.autoPickAt — so Home, the
+     greeting and the clock agree), and a board left on adopts the new week as Friday turns into
+     Saturday. Deckhand's version opened Sunday night with Black still picked and crossed into Monday. */
   test("weekend rollover adopts the new week (no manual override)", async ({ page, dh }) => {
-    await dh.openAt("#t=2026-09-06T23:59:57");    // Sunday night, Black week
+    await dh.openAt("#t=2026-09-04T23:59:57");    // Friday night, Black week
     ok(await activeIndex(page) === 1, "precondition");
-    // cross into Monday (Teal week)
+    // cross into Saturday: no school, so the coming week (Teal, from Monday the 7th)
     await expect.poll(() => activeIndex(page), { timeout: 8000, message: "did not adopt new week" }).toBe(0);
     await dh.home();                              // v7.7: Home rebuilds the chips
     const pressed = await page.locator('#schedChips .chip[aria-pressed="true"]').textContent();

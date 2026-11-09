@@ -113,6 +113,7 @@ test.describe("v7.11.5 hardening", () => {
     const ev = await page.evaluate(() => window.Steward.seaModule.plan("2026-10-30", 2, 50, 5, null).events.map(e => e.act));
     ok(ev[0] !== "castaway" && !ev.includes("ghost") && !ev.includes("bats"), "October rules leaked with season off: " + ev.join());
     await page.evaluate(() => { window.Steward.config.ui.season = "auto"; window.Steward.season.apply(); window.Steward.config.ui.motion = "on"; document.body.classList.add("waveMotion"); });
+    await dh.roomy();                             // Steward 1.2: a beach — nothing seasonal on a card, and this board's clock card reaches the sea
     ok(await page.evaluate(() => window.Steward.sea("bats")), "bats refused");
     await expect(page.locator("#sea-bats")).toHaveClass(/go/);
     await page.click("#setBtn");

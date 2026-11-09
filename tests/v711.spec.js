@@ -5,7 +5,10 @@
  * the spider's re-drop from where it hangs and its three-a-minute cap, the
  * third pumpkin's vine nudge, the ghost's hold on the boat, the director's
  * October rules (cap, day-of-month weight, no ghost before the 12th, the
- * Halloween promise) and the pre-lit pumpkins of the last week. */
+ * Halloween promise) and the pre-lit pumpkins of the last week.
+ * Steward 1.2: the web is drawn on the clock card's corner, and nothing seasonal stands on a card
+ * in Steward, so it is not shown — the spider's mechanics stay pinned here for the day it comes
+ * back. The sea's October acts need a beach under the cards: dh.roomy(). */
 const { test, expect, ok } = require("./helpers");
 
 const motionOn = page => page.evaluate(() => { window.Steward.config.ui.motion = "on"; document.body.classList.add("waveMotion"); });
@@ -15,6 +18,11 @@ test.describe("v7.11 October 2.0", () => {
     await dh.openAt("#t=2026-10-14T10:30");
     await dh.launch();
     await motionOn(page);
+    /* Steward 1.2 hides the web (it is drawn on the clock card, and nothing seasonal stands on a
+       card); its spider's mechanics stay pinned for the day it comes back — so this puts it back
+       on the clock card first, the way that day would (its hang is read from its running idle) */
+    await page.addStyleTag({ content: "body.october .w-clock:not(.stLive) .ocWeb{display:block !important;}" });
+    await expect(page.locator("#ocWeb")).toBeVisible();
     const rig = page.locator("#ocWeb .ocSpiderRig"), spider = page.locator("#ocWeb .ocSpider");
     await spider.dispatchEvent("pointerdown");
     await expect(rig).toHaveClass(/drop/);
@@ -67,6 +75,7 @@ test.describe("v7.11 October 2.0", () => {
     await dh.openAt("#t=2026-10-14T10:30");
     await dh.launch();
     await motionOn(page);
+    await dh.roomy();                             // Steward 1.2: a beach — nothing seasonal on a card, and this board's clock card reaches the sea
     ok(await page.evaluate(() => window.Steward.sea("ghost")), "ghost refused");
     await expect(page.locator("#boat")).toHaveClass(/haunted/);
     ok(!(await page.evaluate(() => window.Steward.sea("pennant"))), "the pennant played over the ghost");

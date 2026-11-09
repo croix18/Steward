@@ -24,7 +24,8 @@ test.describe("Steward 1.0: the board", () => {
     const cfg = await page.evaluate(() => window.Steward.config);
     ok(cfg.scenes.map(s => s.name).join("|") === "Daily Board|Work Time|Break|Stations", "scenes: " + cfg.scenes.map(s => s.name));
     ok(cfg.scenes[0].widgets.find(w => w.type === "calm").min === true, "the calm card should wait in the dock");
-    ok(cfg.ui.season === "off" && cfg.bell.settle.on === false && cfg.timer.style === "disc", "calm defaults: " + JSON.stringify([cfg.ui.season, cfg.bell.settle.on, cfg.timer.style]));
+    // Steward 1.2 (Croix, 8 Nov 2026: "Give steward the autumn theme"): the season follows the calendar now
+    ok(cfg.ui.season === "auto" && cfg.ui.motion === "off" && cfg.bell.settle.on === false && cfg.timer.style === "disc", "calm defaults: " + JSON.stringify([cfg.ui.season, cfg.ui.motion, cfg.bell.settle.on, cfg.timer.style]));
     ok(cfg.ownerName === "", "no owner baked in");
     // the pictures: 57, every one with a filled part
     const pics = await page.evaluate(() => Object.keys(window.Steward.pics).map(k => [k, /class="a"/.test(window.Steward.pics[k][1])]));
@@ -36,8 +37,8 @@ test.describe("Steward 1.0: the board", () => {
     for (const id of ["addMathleBtn", "addCadenceBtn", "addCcardBtn", "ccBlob", "ccPop"]) ok(await page.locator("#" + id).count() === 0, id + " should be gone");
     ok(await page.evaluate(() => window.Steward.mathleWords === undefined && window.Steward.ccardPop === undefined), "math-room hooks linger");
     await page.keyboard.press("Escape");
-    // October stays plain here unless she turns the season on
-    ok(!(await page.evaluate(() => document.body.classList.contains("october"))), "seasonal touches should be off by default");
+    // Steward 1.2: the seasonal touches follow the calendar (October here), on still water
+    ok(await page.evaluate(() => document.body.classList.contains("october") && !document.body.classList.contains("waveMotion")), "the season should follow the calendar, the water still");
     // the public file never carries a class setup (tools/check.sh refuses one)
     const shipped = JSON.parse(/<script id="steward-config"[^>]*>([\s\S]*?)<\/script>/.exec(dh.SHIPPED_SRC)[1]);
     ok(!("support" in shipped) && shipped.rosters.length === 0, "the shipped config block must not carry a setup or rosters");
@@ -557,7 +558,7 @@ test.describe("Steward 1.0: Classes", () => {
     await expect(page.locator("#secClasses")).toBeVisible();
     const opts = await page.locator("#spClass option").allTextContents();
     ok(opts[0] === "All classes" && opts.includes("1st") && opts.includes("HOWL Time") && opts.includes("6th"), "classes on offer: " + opts);
-    await expect(page.locator("#spTools .spTool")).toHaveCount(4);
+    await expect(page.locator("#spTools .spTool")).toHaveCount(5);       // the four tools and (Steward 1.2) Read aloud
     // 3rd: its own token board — three paws
     await page.selectOption("#spClass", "c:3rd");
     const tok = page.locator('#spTools .spTool[data-tool="tokens"]');
@@ -567,8 +568,8 @@ test.describe("Steward 1.0: Classes", () => {
     await expect(goal).toHaveValue("5");
     await goal.fill("3"); await goal.blur();
     await tok.locator('.spTok[aria-label="Paw"]').click();
-    // the other three tools still follow All classes
-    await expect(page.locator("#spTools .spSame")).toHaveCount(3);
+    // the other three tools (and Read aloud) still follow All classes
+    await expect(page.locator("#spTools .spSame")).toHaveCount(4);
     // Close forgets; Apply keeps
     await page.click("#closeBtn");
     ok((await page.evaluate(() => window.Steward.config.support.classes.length)) === 0, "Close kept a draft");

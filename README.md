@@ -5,7 +5,7 @@ A classroom board for an **ESE resource room**, in one HTML file. Steward is a f
 what a pull-out room needs: small groups rotating through, readers who need structure, short
 chunks and clear timers, on a touch panel at the front of the room.
 
-Version 1.1.0. It is live at **mrshaffer.org/steward/** (installs as an app, opens offline), or open
+Version 1.2.0. It is live at **mrshaffer.org/steward/** (installs as an app, opens offline), or open
 `Steward.html` in Chrome and it runs: no server, no account, nothing to
 install.
 
@@ -33,6 +33,22 @@ choices. A check-in is never recorded.
 
 All four use the same set of 57 original pictures (`art/pics`).
 
+## Read aloud
+
+A small speaker sits beside what a student reads: the Now and Next steps, each First / Then panel,
+what the token board is working for, and the Check in faces and choices. A tap on it says the word,
+so a student who can't read yet can use the board on their own. A tap on the step, the panel or the
+reward itself still does what it always did.
+
+It uses the voices built into the computer: nothing to install, no internet needed. Settings →
+General → Read aloud picks the voice and the speed (a little slow to start with), has a Try it
+button, and can turn the speakers off. A computer with no English voice shows no speakers.
+
+For a class, Settings → Classes → Read aloud → **Say changes out loud** has the board speak for
+itself: "Now: Reading" when the schedule moves on, "Then: Break" when First is done, "Choice time!"
+when a row of tokens fills. It is off unless she turns it on, it only speaks while the board's sound
+is on, and it never says a student's name.
+
 ## Classes
 
 Settings → **Classes** holds one setup for every class and, for any class, its own version of any
@@ -48,12 +64,18 @@ until she picks something else. A group that is not on the bell schedule can be 
 Steward ships quieter than Deckhand:
 
 - A timer finishes with three soft notes and a small badge in the corner, not a full-screen alarm.
-- The water at the bottom of the board is still, and the seasonal decorations are off.
+- The water at the bottom of the board is still.
+- The seasonal decorations make no sound. They follow the calendar (October's pumpkins, November's
+  leaves, scarecrow and the rest) and stay off every card: a piece that would stand on a card, or
+  move onto one, steps aside, and a leaf falls only down an edge with no card in it. The boards
+  Steward ships run their cards down to the water, so on them autumn is quiet: leaves at rest on the
+  water and a lantern on the boat.
 - There is no settle-in countdown at the bell.
 - The timer's default face is a disc that drains.
 - Settings → General offers two typefaces made for reading, Lexend and Atkinson Hyperlegible.
 
-Each of these is a setting and can be turned back.
+Each of these is a setting and can be turned back (Settings → General → Seasonal touches → Off
+takes the decorations).
 
 ## What it keeps
 
@@ -70,8 +92,8 @@ and `tools/check.sh` refuses a push that would.
 
 The clock and bell schedule, timers and stopwatch, Stations, Work Mode, the noise meter, music and
 nature sounds, the agenda and text box, slides and YouTube, the sketch pad, the pen, the number
-line, dice, coin, spinner and cards are all here and unchanged. Mathle, the Cadence card and
-comment cards were taken out.
+line, dice, coin, spinner and cards are all here, with Deckhand's fixes through 7.60.1 and its
+autumn theme. Mathle, the Cadence card and comment cards were taken out.
 
 The shipped bell schedule is Windy Hill Middle School's, with the 7th-grade lunch. Settings →
 Schedules changes it.
@@ -80,7 +102,7 @@ Schedules changes it.
 
 ```
 npm install
-npx playwright test     # 293 tests
+npx playwright test     # 345 tests
 sh tools/check.sh       # the privacy guard
 ```
 
